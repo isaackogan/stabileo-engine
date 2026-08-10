@@ -1,0 +1,12 @@
+mod dam_engineering_extended;
+mod deep_excavation_extended;
+mod foundation_design_extended;
+mod foundation_engineering_extended;
+mod foundation_interaction;
+mod geosynthetics_extended;
+mod retaining_walls_extended;
+mod rock_mechanics_extended;
+mod soil_structure;
+mod soil_structure_extended;
+mod tunnel_lining_extended;
+mod water_retaining_extended;

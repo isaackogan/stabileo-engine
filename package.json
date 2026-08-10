@@ -1,0 +1,60 @@
+{
+  "name": "stabileo-engine",
+  "version": "0.1.0",
+  "description": "Typed WebAssembly bindings for the Stabileo structural analysis engine",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isaackogan/stabileo-engine.git"
+  },
+  "homepage": "https://github.com/isaackogan/stabileo-engine#readme",
+  "bugs": {
+    "url": "https://github.com/isaackogan/stabileo-engine/issues"
+  },
+  "license": "AGPL-3.0-only",
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "vendor": "sh ./src/scripts/vendor-stabileo.sh",
+    "build:wasm": "sh ./src/scripts/build-wasm.sh",
+    "generate:types": "node ./src/typegen/cli.mjs generate",
+    "bindings:update": "node ./src/typegen/cli.mjs update",
+    "build": "npm run build:wasm && npm run generate:types && tsdown",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:browser": "playwright test",
+    "pack:check": "node ./src/scripts/check-package.mjs",
+    "release:pack": "node ./src/scripts/check-package.mjs --output .",
+    "check": "npm run build && npm run typecheck && npm run test:unit && npm run test:browser && npm run pack:check",
+    "test": "npm run check"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "latest",
+    "@playwright/test": "latest",
+    "@types/node": "latest",
+    "publint": "latest",
+    "tsdown": "latest",
+    "typescript": "latest",
+    "vitest": "latest",
+    "yaml": "latest"
+  }
+}

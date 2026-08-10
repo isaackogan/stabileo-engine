@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version increment
+        required: true
+        default: patch
+        type: choice
+        options: [patch, minor, major]
+
+concurrency:
+  group: stabileo-engine-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      tarball: ${{ steps.pack.outputs.tarball }}
+    steps:
+      - name: Enforce main branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Releases must run from main" >&2
+          exit 1
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install OIDC-capable npm
+        run: npm install --global npm@latest
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+          components: rust-src
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack@0.13.1
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: Set release version
+        id: version
+        run: |
+          npm version "${{ inputs.bump }}" --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          test -n "$VERSION"
+          node ./src/scripts/sync-version.mjs "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build and verify checked-in vendored source
+        run: pnpm check
+
+      - name: Create exact publication tarball
+        id: pack
+        run: |
+          npm pack --json > "$RUNNER_TEMP/npm-pack.json"
+          TARBALL=$(node -e "const r=require(process.argv[1]); process.stdout.write(r[0].filename)" "$RUNNER_TEMP/npm-pack.json")
+          EXPECTED="stabileo-engine-${{ steps.version.outputs.version }}.tgz"
+          test "$TARBALL" = "$EXPECTED"
+          test -f "$TARBALL"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish exact tarball through npm trusted publishing
+        run: |
+          TARBALL="${{ steps.pack.outputs.tarball }}"
+          test -f "$TARBALL"
+          npm publish "$TARBALL" --access public
+
+      - name: Commit version and push tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src/version.ts
+          git commit -m "release: $TAG"
+          git push origin HEAD:main
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: |
+            ${{ steps.pack.outputs.tarball }}
+            dist/stabileo-engine.wasm
+          if-no-files-found: error
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Create, resume, or validate GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+          VERSION: ${{ needs.publish.outputs.version }}
+          TARBALL: ${{ needs.publish.outputs.tarball }}
+        run: |
+          sh ./src/scripts/publish-github-release.sh \
+            "$TAG" \
+            "$VERSION" \
+            "release-assets/$TARBALL" \
+            "release-assets/stabileo-engine.wasm"

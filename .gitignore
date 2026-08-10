@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+.idea/
+dist/
+coverage/
+playwright-report/
+test-results/
+vendored/stabileo-engine.wasm
+vendored/stabileo/target/
+src/generated/
+*.tgz
+.DS_Store
