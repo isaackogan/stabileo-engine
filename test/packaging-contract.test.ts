@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { parse } from "yaml";
 import { describe, expect, test } from "vitest";
@@ -23,6 +23,26 @@ describe("package and workflow contracts", () => {
     });
     expect(packageJson.engines.node).toBe(">=22");
     expect(packageJson.scripts["release:pack"]).toBe("node ./src/scripts/check-package.mjs --output .");
+  });
+
+  test("every bundled sibling WASM URL resolves to the shipped branded asset", async () => {
+    const bundle = await text("dist/index.js");
+    const references = Array.from(
+      bundle.matchAll(/new URL\((['"])([^'"]+\.wasm)\1,\s*import\.meta\.url\)/g),
+      (match) => {
+        const reference = match[2];
+        if (reference === undefined) throw new TypeError("WASM URL match omitted its path");
+        return reference;
+      },
+    );
+
+    expect(references.length).toBeGreaterThan(0);
+    expect(new Set(references)).toEqual(new Set(["./stabileo-engine.wasm"]));
+    await Promise.all(
+      Array.from(new Set(references), (reference) =>
+        access(path.join(root, "dist", reference)),
+      ),
+    );
   });
 
   test("CI builds the checked-in snapshot and gates Dependabot auto-merge", async () => {

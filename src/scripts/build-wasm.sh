@@ -86,6 +86,29 @@ do
   fi
 done
 
+# wasm-bindgen's web target retains a default sibling URL even when callers
+# provide explicit bytes. The public package ships the same binary under the
+# stable branded name below, and static bundlers resolve this fallback during
+# graph construction. Normalize the generated glue before publishing it and
+# fail closed if the pinned wasm-bindgen output shape changes.
+node --input-type=module - "$package_directory/stabileo_engine.js" <<'NODE'
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file = process.argv[2];
+if (!file) throw new Error("normalize-wasm-glue: missing generated glue path");
+
+const source = readFileSync(file, "utf8");
+const generatedReference = "new URL('stabileo_engine_bg.wasm', import.meta.url)";
+const shippedReference = "new URL('./stabileo-engine.wasm', import.meta.url)";
+const occurrences = source.split(generatedReference).length - 1;
+if (occurrences !== 1) {
+  throw new Error(
+    `normalize-wasm-glue: expected exactly one generated WASM URL, found ${occurrences}`,
+  );
+}
+writeFileSync(file, source.replace(generatedReference, shippedReference));
+NODE
+
 mkdir -p "$project_root/vendored" "$generated_directory"
 cp "$package_directory/stabileo_engine_bg.wasm" "$wasm_destination.next.$$"
 cp "$package_directory/stabileo_engine.js" "$generated_directory/stabileo_engine.js.next.$$"

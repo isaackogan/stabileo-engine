@@ -51,7 +51,7 @@ while [ "$#" -gt 0 ]; do
 done
 mkdir -p "$out_dir"
 printf 'wasm-bytes' > "$out_dir/\${out_name}_bg.wasm"
-printf 'export default async function init() {}\n' > "$out_dir/\${out_name}.js"
+printf "export default async function init(module_or_path) { if (module_or_path === undefined) module_or_path = new URL('stabileo_engine_bg.wasm', import.meta.url); }\n" > "$out_dir/\${out_name}.js"
 printf 'export default function init(): Promise<void>;\n' > "$out_dir/\${out_name}.d.ts"
 `);
   await chmod(wasmPack, 0o755);
@@ -77,8 +77,13 @@ describe("build-wasm.sh", () => {
 
     expect(await readFile(path.join(fixture.root, "vendored", "stabileo-engine.wasm"), "utf8"))
       .toBe("wasm-bytes");
-    expect(await readFile(path.join(fixture.root, "src", "generated", "wasm", "stabileo_engine.js"), "utf8"))
-      .toContain("async function init");
+    const generatedGlue = await readFile(
+      path.join(fixture.root, "src", "generated", "wasm", "stabileo_engine.js"),
+      "utf8",
+    );
+    expect(generatedGlue).toContain("async function init");
+    expect(generatedGlue).toContain("new URL('./stabileo-engine.wasm', import.meta.url)");
+    expect(generatedGlue).not.toContain("stabileo_engine_bg.wasm");
     expect(await readFile(path.join(fixture.root, "src", "generated", "wasm", "stabileo_engine.d.ts"), "utf8"))
       .toContain("Promise<void>");
   });
