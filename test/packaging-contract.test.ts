@@ -86,6 +86,7 @@ describe("package and workflow contracts", () => {
     );
     expect(source).toContain("actions/upload-artifact@v7");
     expect(source).toContain("actions/download-artifact@v7");
+    expect(source).toContain('"release-assets/dist/stabileo-engine.wasm"');
     expect(releaseScript).toContain("gh release create");
     expect(releaseScript).toContain("--verify-tag");
     expect(releaseScript).toContain("--generate-notes");

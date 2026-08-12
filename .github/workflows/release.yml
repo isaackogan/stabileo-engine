@@ -148,4 +148,4 @@ jobs:
             "$TAG" \
             "$VERSION" \
             "release-assets/$TARBALL" \
-            "release-assets/stabileo-engine.wasm"
+            "release-assets/dist/stabileo-engine.wasm"
