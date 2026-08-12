@@ -69,6 +69,7 @@ describe("package and workflow contracts", () => {
     const workflow = parse(source);
 
     expect(workflow.jobs.publish.permissions["id-token"]).toBe("write");
+    expect(workflow.jobs.publish.environment).toBe("public");
     expect(workflow.jobs.release.needs).toBe("publish");
     expect(source).toContain("node-version: 24");
     expect(source).toContain("registry-url: https://registry.npmjs.org");
