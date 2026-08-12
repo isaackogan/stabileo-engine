@@ -1,6 +1,6 @@
 {
   "name": "stabileo-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed WebAssembly bindings for the Stabileo structural analysis engine",
   "type": "module",
   "main": "./dist/index.js",

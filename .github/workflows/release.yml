@@ -2,13 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      bump:
-        description: Version increment
-        required: true
-        default: patch
-        type: choice
-        options: [patch, minor, major]
 
 concurrency:
   group: stabileo-engine-release
@@ -60,13 +53,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
 
-      - name: Set release version
+      - name: Verify committed release version
         id: version
         run: |
-          npm version "${{ inputs.bump }}" --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
           test -n "$VERSION"
           node ./src/scripts/sync-version.mjs "$VERSION"
+          git diff --exit-code -- package.json src/version.ts
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -83,24 +76,42 @@ jobs:
           test -f "$TARBALL"
           echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
 
-      - name: Publish exact tarball through npm trusted publishing
+      - name: Secure or validate the release tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git fetch --force --tags origin
+          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            test "$(git rev-list -n 1 "$TAG")" = "$GITHUB_SHA"
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "$TAG"
+          fi
+
+      - name: Publish or resume the exact tarball through npm trusted publishing
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           TARBALL="${{ steps.pack.outputs.tarball }}"
           test -f "$TARBALL"
-          npm publish "$TARBALL" --access public
+          LOCAL_SHASUM=$(sha1sum "$TARBALL" | awk '{print $1}')
+          test -n "$LOCAL_SHASUM"
 
-      - name: Commit version and push tag
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json src/version.ts
-          git commit -m "release: $TAG"
-          git push origin HEAD:main
-          git tag "$TAG"
-          git push origin "$TAG"
+          if REGISTRY_SHASUM=$(npm view "stabileo-engine@$VERSION" dist.shasum 2>/dev/null); then
+            test -n "$REGISTRY_SHASUM"
+            test "$REGISTRY_SHASUM" = "$LOCAL_SHASUM"
+            echo "Registry already contains the exact verified tarball."
+          else
+            npm publish "$TARBALL" --access public
+          fi
+
+          PUBLISHED_SHASUM=""
+          for attempt in $(seq 1 12); do
+            PUBLISHED_SHASUM=$(npm view "stabileo-engine@$VERSION" dist.shasum 2>/dev/null || true)
+            if [ "$PUBLISHED_SHASUM" = "$LOCAL_SHASUM" ]; then break; fi
+            sleep 5
+          done
+          test "$PUBLISHED_SHASUM" = "$LOCAL_SHASUM"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -119,6 +130,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ needs.publish.outputs.tag }}
 
       - uses: actions/download-artifact@v7
         with:

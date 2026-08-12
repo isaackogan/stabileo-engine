@@ -58,6 +58,10 @@ try {
   for (const entry of required) {
     if (!listing.includes(entry)) throw new Error(`tarball is missing ${entry}`);
   }
+  const wasmEntries = listing.filter((entry) => entry.endsWith(".wasm"));
+  if (wasmEntries.length !== 1 || wasmEntries[0] !== "package/dist/stabileo-engine.wasm") {
+    throw new Error(`tarball must contain exactly one branded WASM, found: ${wasmEntries.join(", ")}`);
+  }
   if (listing.some((entry) => entry.startsWith("package/vendored/") || entry.startsWith("package/src/"))) {
     throw new Error("tarball contains development-only Rust or TypeScript sources");
   }

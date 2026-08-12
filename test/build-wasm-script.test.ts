@@ -51,7 +51,12 @@ while [ "$#" -gt 0 ]; do
 done
 mkdir -p "$out_dir"
 printf 'wasm-bytes' > "$out_dir/\${out_name}_bg.wasm"
-printf "export default async function init(module_or_path) { if (module_or_path === undefined) module_or_path = new URL('stabileo_engine_bg.wasm', import.meta.url); }\n" > "$out_dir/\${out_name}.js"
+case "\${FAKE_WASM_GLUE_MODE:-one}" in
+  zero) printf 'export default async function init() {}\n' > "$out_dir/\${out_name}.js" ;;
+  one) printf "export default async function init(module_or_path) { if (module_or_path === undefined) module_or_path = new URL('stabileo_engine_bg.wasm', import.meta.url); }\n" > "$out_dir/\${out_name}.js" ;;
+  multiple) printf "const first = new URL('stabileo_engine_bg.wasm', import.meta.url); const second = new URL('stabileo_engine_bg.wasm', import.meta.url); export default async function init() {}\n" > "$out_dir/\${out_name}.js" ;;
+  *) exit 43 ;;
+esac
 printf 'export default function init(): Promise<void>;\n' > "$out_dir/\${out_name}.d.ts"
 `);
   await chmod(wasmPack, 0o755);
@@ -109,4 +114,22 @@ describe("build-wasm.sh", () => {
     expect(await readFile(path.join(generated, "stabileo_engine.js"), "utf8")).toBe("old-js");
     expect(await readFile(path.join(generated, "stabileo_engine.d.ts"), "utf8")).toBe("old-dts");
   });
+
+  test.each(["zero", "multiple"])(
+    "fails closed when wasm-bindgen emits %s fallback references",
+    async (mode) => {
+      const fixture = await createFixture();
+
+      await expect(execFileAsync("sh", [fixture.script], {
+        cwd: fixture.root,
+        env: {
+          ...process.env,
+          PATH: `${fixture.bin}:${process.env.PATH ?? ""}`,
+          FAKE_WASM_GLUE_MODE: mode,
+        },
+      })).rejects.toMatchObject({
+        stderr: expect.stringContaining("expected exactly one generated WASM URL"),
+      });
+    },
+  );
 });

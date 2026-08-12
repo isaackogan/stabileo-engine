@@ -9,6 +9,9 @@ import {
 } from "../src/index.js";
 
 const wasmPath = new URL("../vendored/stabileo-engine.wasm", import.meta.url);
+const packageJson = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+);
 
 function cantilever(): SolverInput {
   return {
@@ -55,7 +58,7 @@ describe.sequential("StabileoEngine runtime", () => {
     expect(initStabileoEngineSync({ wasm: module })).toBe(first);
     expect(first.raw.solve_2d).toBeTypeOf("function");
     expect(first.raw.solve_pdelta_2d).toBeTypeOf("function");
-    expect(version).toBe("0.1.0");
+    expect(version).toBe(packageJson.version);
   });
 
   test("solves a numerical 2D cantilever and exposes advanced JSON operations", async () => {

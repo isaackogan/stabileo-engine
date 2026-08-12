@@ -1,9 +1,10 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { parse } from "yaml";
 import { describe, expect, test } from "vitest";
 
 const root = path.resolve(import.meta.dirname, "..");
+const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 
 async function text(file: string) {
   return readFile(path.join(root, file), "utf8");
@@ -11,11 +12,8 @@ async function text(file: string) {
 
 describe("package and workflow contracts", () => {
   test("declares a public ESM package with release and validation scripts", async () => {
-    const packageJson = JSON.parse(await text("package.json"));
-
     expect(packageJson).toMatchObject({
       name: "stabileo-engine",
-      version: "0.1.0",
       type: "module",
       license: "AGPL-3.0-only",
       packageManager: "pnpm@10.33.0",
@@ -26,16 +24,22 @@ describe("package and workflow contracts", () => {
   });
 
   test("every bundled sibling WASM URL resolves to the shipped branded asset", async () => {
-    const bundle = await text("dist/index.js");
-    const references = Array.from(
-      bundle.matchAll(/new URL\((['"])([^'"]+\.wasm)\1,\s*import\.meta\.url\)/g),
-      (match) => {
+    const dist = path.join(root, "dist");
+    const emittedFiles = (await readdir(dist, { recursive: true })).sort();
+    const javascriptFiles = emittedFiles.filter((file) => file.endsWith(".js"));
+    const wasmFiles = emittedFiles.filter((file) => file.endsWith(".wasm"));
+    const references: string[] = [];
+
+    for (const javascriptFile of javascriptFiles) {
+      const bundle = await readFile(path.join(dist, javascriptFile), "utf8");
+      for (const match of bundle.matchAll(/new URL\((['"])([^'"]+\.wasm)\1,\s*import\.meta\.url\)/g)) {
         const reference = match[2];
         if (reference === undefined) throw new TypeError("WASM URL match omitted its path");
-        return reference;
-      },
-    );
+        references.push(reference);
+      }
+    }
 
+    expect(wasmFiles).toEqual(["stabileo-engine.wasm"]);
     expect(references.length).toBeGreaterThan(0);
     expect(new Set(references)).toEqual(new Set(["./stabileo-engine.wasm"]));
     await Promise.all(
@@ -69,6 +73,12 @@ describe("package and workflow contracts", () => {
     expect(source).toContain("registry-url: https://registry.npmjs.org");
     expect(source).toContain("npm install --global npm@latest");
     expect(source).toContain('npm publish "$TARBALL" --access public');
+    expect(source).not.toContain("npm version");
+    expect(source).toContain("REGISTRY_SHASUM");
+    expect(source).toContain('git push origin "$TAG"');
+    expect(source.indexOf('git push origin "$TAG"')).toBeLessThan(
+      source.indexOf('npm publish "$TARBALL" --access public'),
+    );
     expect(source).toContain("actions/upload-artifact@v7");
     expect(source).toContain("actions/download-artifact@v7");
     expect(releaseScript).toContain("gh release create");
