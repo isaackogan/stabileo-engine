@@ -69,10 +69,9 @@ jobs:
       - name: Create exact publication tarball
         id: pack
         run: |
-          npm pack --json > "$RUNNER_TEMP/npm-pack.json"
-          TARBALL=$(node -e "const r=require(process.argv[1]); process.stdout.write(r[0].filename)" "$RUNNER_TEMP/npm-pack.json")
           EXPECTED="stabileo-engine-${{ steps.version.outputs.version }}.tgz"
-          test "$TARBALL" = "$EXPECTED"
+          npm pack
+          TARBALL="$EXPECTED"
           test -f "$TARBALL"
           echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
 

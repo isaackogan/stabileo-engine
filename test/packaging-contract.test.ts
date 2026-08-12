@@ -64,6 +64,7 @@ describe("package and workflow contracts", () => {
 
   test("release uses OIDC, the exact tarball, and a dependent GitHub Release job", async () => {
     const source = await text(".github/workflows/release.yml");
+    const packageChecker = await text("src/scripts/check-package.mjs");
     const releaseScript = await text("src/scripts/publish-github-release.sh");
     const workflow = parse(source);
 
@@ -72,6 +73,9 @@ describe("package and workflow contracts", () => {
     expect(source).toContain("node-version: 24");
     expect(source).toContain("registry-url: https://registry.npmjs.org");
     expect(source).toContain("npm install --global npm@latest");
+    expect(source).not.toContain("npm pack --json");
+    expect(packageChecker).not.toContain('"--json"');
+    expect(packageChecker).toContain("expectedFilename");
     expect(source).toContain('npm publish "$TARBALL" --access public');
     expect(source).not.toContain("npm version");
     expect(source).toContain("REGISTRY_SHASUM");

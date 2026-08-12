@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFile, spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -33,18 +33,17 @@ async function commandBuffer(command, args) {
 
 const temporaryDirectory = await mkdtemp(path.join(tmpdir(), "stabileo-package-"));
 try {
-  const destination = requestedOutput ? path.resolve(root, requestedOutput) : temporaryDirectory;
-  const { stdout } = await execFileAsync("npm", ["pack", "--json", "--pack-destination", destination], {
+  const expectedFilename = `${packageJson.name}-${packageJson.version}.tgz`;
+  const tarball = path.join(temporaryDirectory, expectedFilename);
+  await execFileAsync("npm", ["pack", "--pack-destination", temporaryDirectory], {
     cwd: root,
     maxBuffer: 8 * 1024 * 1024,
   });
-  const packResult = JSON.parse(stdout);
-  const filename = packResult[0]?.filename;
-  const expectedFilename = `${packageJson.name}-${packageJson.version}.tgz`;
-  if (filename !== expectedFilename) {
-    throw new Error(`npm pack produced ${filename ?? "no tarball"}, expected ${expectedFilename}`);
+  try {
+    await access(tarball);
+  } catch {
+    throw new Error(`npm pack did not produce the expected tarball ${expectedFilename}`);
   }
-  const tarball = path.join(destination, filename);
   const listing = (await commandBuffer("tar", ["-tf", tarball])).toString("utf8").trim().split("\n");
   const required = [
     "package/package.json",
@@ -82,7 +81,11 @@ try {
     `const sdk = await import(${JSON.stringify(bundleUrl)}); const engine = await sdk.initStabileoEngine(); const value = engine.analyzeSection({ polygons: [{ vertices: [[0, 0], [2, 0], [2, 3], [0, 3]] }] }); if (value.a !== 6) throw new Error('built Node package failed its WASM smoke test');`,
   ], { cwd: root });
 
-  process.stdout.write(`Verified ${tarball}\n`);
+  const verifiedTarball = requestedOutput
+    ? path.join(path.resolve(root, requestedOutput), expectedFilename)
+    : tarball;
+  if (requestedOutput) await copyFile(tarball, verifiedTarball);
+  process.stdout.write(`Verified ${verifiedTarball}\n`);
 } finally {
   await rm(temporaryDirectory, { recursive: true, force: true });
 }
