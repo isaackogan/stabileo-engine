@@ -1,2 +1,2 @@
 // Synchronized from package.json by src/scripts/sync-version.mjs.
-export const version = "0.1.1";
+export const version = "0.1.2";
