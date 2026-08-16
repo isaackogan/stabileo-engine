@@ -1,0 +1,19 @@
+# The wrapper's own Rust lives in crates/*; the vendored upstream stays a
+# self-contained crate the vendor script may replace wholesale, consumed here
+# as a path dependency rather than a member so re-vendoring never collides
+# with additive code. One binary still ships: crates/stabileo-wasm is the
+# cdylib root that links the kernel and the pallet orchestration together.
+[workspace]
+resolver = "2"
+members = ["crates/stabileo-pallet", "crates/stabileo-wasm"]
+exclude = ["vendored/stabileo"]
+
+# Mirror the vendored crate's release profile exactly: the members build the
+# same kernel code through this workspace, and a profile drift here would ship
+# a differently-optimized solver than the one the standalone crate tests.
+[profile.release]
+opt-level = 3
+lto = true
+
+[profile.test]
+opt-level = 1

@@ -1,0 +1,12 @@
+[package]
+name = "stabileo-pallet"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+authors = ["Isaac Kogan"]
+description = "Coupled pallet/unit-load analysis orchestration on the Dedaliano structural kernel: unilateral floor contact, Coulomb stick/slip, the coupled load partition, and the active-state search, in one call per load event"
+
+[dependencies]
+dedaliano-engine = { path = "../../vendored/stabileo" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

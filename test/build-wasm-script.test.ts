@@ -13,14 +13,20 @@ async function createFixture(): Promise<{ root: string; script: string; bin: str
   temporaryDirectories.push(root);
   const scripts = path.join(root, "src", "scripts");
   const engine = path.join(root, "vendored", "stabileo");
+  // The cdylib root the script actually builds is the workspace shell crate;
+  // the vendored kernel is staged beside it because the script still requires
+  // a vendored tree to exist before any build is attempted.
+  const shell = path.join(root, "crates", "stabileo-wasm");
   const bin = path.join(root, "bin");
   await Promise.all([
     mkdir(scripts, { recursive: true }),
     mkdir(engine, { recursive: true }),
+    mkdir(shell, { recursive: true }),
     mkdir(bin, { recursive: true }),
   ]);
   await writeFile(path.join(root, "package.json"), "{}\n");
   await writeFile(path.join(engine, "Cargo.toml"), "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n");
+  await writeFile(path.join(shell, "Cargo.toml"), "[package]\nname = \"shell-fixture\"\nversion = \"0.1.0\"\n");
   await writeFile(path.join(root, "vendored", "STABILEO_REVISION"), "0123456789abcdef\n");
   const script = path.join(scripts, "build-wasm.sh");
   await cp(path.resolve("src/scripts/build-wasm.sh"), script);

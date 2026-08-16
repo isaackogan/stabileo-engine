@@ -3,7 +3,9 @@ set -eu
 
 script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 project_root=$(CDPATH= cd -- "$script_directory/../.." && pwd -P)
-engine_directory="$project_root/vendored/stabileo"
+# The cdylib root is the workspace shell crate: the vendored kernel surface
+# re-exported unchanged plus the pallet orchestration entries, one binary.
+engine_directory="$project_root/crates/stabileo-wasm"
 revision_file="$project_root/vendored/STABILEO_REVISION"
 wasm_destination="$project_root/vendored/stabileo-engine.wasm"
 generated_directory="$project_root/src/generated/wasm"

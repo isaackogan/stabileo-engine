@@ -1,0 +1,16 @@
+[package]
+name = "stabileo-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+authors = ["Isaac Kogan"]
+description = "WASM shell for the Stabileo engine: the Dedaliano kernel surface plus the pallet coupled-analysis entry, linked into the one shipped binary"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dedaliano-engine = { path = "../../vendored/stabileo" }
+stabileo-pallet = { path = "../stabileo-pallet" }
+wasm-bindgen = "0.2"
+serde_json = "1.0"

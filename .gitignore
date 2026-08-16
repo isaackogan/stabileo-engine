@@ -10,3 +10,6 @@ vendored/stabileo/target/
 src/generated/
 *.tgz
 .DS_Store
+
+# Workspace build output
+/target/
