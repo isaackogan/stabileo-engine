@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "semanticSha256": "cc74678b8dcb9dd566e5e6ec7cee95b2434bac6aa6b2ad8494dae23c4b963b15",
+  "semanticSha256": "2b695184f6e55e29657c7d13bca33115ec16e100cd3e480fc8689bfce08f6b80",
   "rustdocFormatVersion": 61,
   "operations": {
     "analyze_kinematics_2d": {
@@ -527,6 +527,20 @@
         "CorotationalResult3D"
       ]
     },
+    "solve_coupled_pallet_event": {
+      "method": "solveCoupledPalletEvent",
+      "transport": "json",
+      "input": "JsonValue",
+      "output": "JsonValue",
+      "parameters": [
+        {
+          "raw": "progress",
+          "name": "progress",
+          "type": "((payload: string) => void) | null | undefined"
+        }
+      ],
+      "roots": []
+    },
     "solve_creep_shrinkage_2d": {
       "method": "solveCreepShrinkage2D",
       "transport": "json",
@@ -833,7 +847,7 @@
       ]
     }
   },
-  "sourceSha256": "896702a9d6eb062298f0958dbe31734ed4b7c1dd62fa9b3a5ada6373eb51a3b5",
+  "sourceSha256": "01265b52fe55589f4668f1d10da19d07a7011e26c1d37c3278c837786e1330e3",
   "wasmExports": [
     "analyze_kinematics_2d",
     "analyze_kinematics_3d",
@@ -883,6 +897,7 @@
     "solve_contact_3d",
     "solve_corotational_2d",
     "solve_corotational_3d",
+    "solve_coupled_pallet_event",
     "solve_creep_shrinkage_2d",
     "solve_creep_shrinkage_3d",
     "solve_displacement_control",

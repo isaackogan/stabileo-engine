@@ -193,6 +193,8 @@ name = "stabileo-wasm"
 version = "0.1.0"
 dependencies = [
  "dedaliano-engine",
+ "js-sys",
+ "serde",
  "serde_json",
  "stabileo-pallet",
  "wasm-bindgen",
