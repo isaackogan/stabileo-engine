@@ -7,4 +7,12 @@
 //! call solves one load event; the kernel is invoked natively per inner
 //! round, with no serialization between rounds.
 
+pub mod coupled;
+pub mod kernel_bridge;
+pub mod native_port;
+pub mod pallet;
+pub mod partition;
 pub mod schema;
+pub mod support_state;
+pub mod types;
+pub mod unit_load;
